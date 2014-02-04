@@ -1,0 +1,7 @@
+[Unit]
+Description=Process OpenStack/AWS metadata
+
+[Service]
+Type=oneshot
+Before=multi-user.target sshd.service
+ExecStart=@libexecdir@/min-metadata-service

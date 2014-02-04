@@ -1,0 +1,35 @@
+# Makefile for C source code
+#
+# Copyright (C) 2014 Colin Walters <walters@verbum.org>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the
+# Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+# Boston, MA 02111-1307, USA.
+
+libexec_PROGRAMS += min-metadata-service
+
+min_metadata_service_SOURCES = \
+	src/min-metadata-service.c \
+	$(NULL)
+min_metadata_service_CFLAGS = $(BUILDDEP_MMS_CFLAGS) -I$(srcdir)/src
+min_metadata_service_LDADD = $(BUILDDEP_MMS_LIBS)
+
+systemdservice_in_files = src/min-metadata.service.in
+
+if HAVE_SYSTEMD
+systemdservicedir       = $(systemdsystemunitdir)
+systemdservice_DATA     = min-metadata.service
+min-metadata.service: src/min-metadata.service.in Makefile
+	$(AM_V_GEN) sed -e "s|\@libexecdir\@|$(libexecdir)|" $< > $@.tmp && mv $@.tmp $@
+endif
