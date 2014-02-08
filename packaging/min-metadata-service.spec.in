@@ -8,6 +8,7 @@ URL:            https://github.com/cgwalters/rpm-ostree
 Source0:        %{name}-%{version}.tar.xz
 BuildRequires: autoconf automake libtool
 BuildRequires: pkgconfig(gio-unix-2.0)
+BuildRequires: pkgconfig(libgsystem)
 BuildRequires: pkgconfig(libsoup-2.4)
 
 %description
@@ -38,4 +39,5 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(-,root,root,-)
 %doc COPYING
-%{_libexecdir}/min-metadata
+%{_libexecdir}/min-metadata-service
+%{_prefix}/lib/systemd/system/min-metadata.service
