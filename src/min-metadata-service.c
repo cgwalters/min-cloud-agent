@@ -29,6 +29,10 @@
 
 #include "libgsystem.h"
 
+#define MMS_KEY_INSTALLED_SUCCESS_ID "79d8b3e43cf9583435de95a9c20e24bc"
+#define MMS_REQUEST_FAILED_ID        "ad5105612b8dd30800c2a29b12aabf3f"
+#define MMS_TIMEOUT_ID               "d5684567f7d4843dac78ed23ee480163"
+
 typedef struct {
   gboolean running;
   gboolean metadata_available;
@@ -38,7 +42,6 @@ typedef struct {
   SoupSession *session;
   GCancellable *cancellable;
   GError *error;
-  guint timeout_id;
   guint do_one_attempt_id;
   guint request_failure_count;
 } MinMetadataServiceApp;
@@ -55,6 +58,7 @@ do_one_attempt (gpointer user_data)
   gs_unref_object GFileOutputStream *outstream = NULL;
   gs_unref_object GFile *authorized_keys_path = NULL;
   SoupURI *uri = NULL;
+  const int max_request_failures = 5;
 
   addr_str = g_inet_address_to_string (self->addr);
   uri_str = g_strconcat ("http://", addr_str, "/2009-04-04/meta-data/public-keys/0/openssh-key", NULL);
@@ -84,23 +88,28 @@ do_one_attempt (gpointer user_data)
                                   self->cancellable, &local_error))
     goto out;
 
-  g_print ("Successfully installed key to '%s'\n",
-           gs_file_get_path_cached (authorized_keys_path));
+  gs_log_structured_print_id_v (MMS_KEY_INSTALLED_SUCCESS_ID,
+                                "Successfully installed ssh key for '%s'",
+                                "root");
 
  out:
   if (local_error)
     {
       self->request_failure_count++;
-      if (self->request_failure_count > 30)
+      if (self->request_failure_count >= max_request_failures)
         {
-          g_prefix_error (&local_error, "Request failed (final attempt): ");
-          g_propagate_error (&self->error, local_error);
+          g_error_free (local_error);
+          gs_log_structured_print_id_v (MMS_TIMEOUT_ID,
+                                        "Reached maximum failed attempts (%u) to fetch metadata",
+                                        self->request_failure_count);
           self->do_one_attempt_id = 0;
+          self->running = FALSE;
         }
       else
         {
-          g_printerr ("Request failed (count: %u): %s\n", self->request_failure_count,
-                      local_error->message);
+          gs_log_structured_print_id_v (MMS_REQUEST_FAILED_ID,
+                                        "Request failed (count: %u): %s", self->request_failure_count,
+                                        local_error->message);
           g_error_free (local_error);
           self->do_one_attempt_id = g_timeout_add_seconds (self->request_failure_count,
                                                            do_one_attempt, self);
