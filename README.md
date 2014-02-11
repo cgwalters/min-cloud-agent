@@ -1,8 +1,8 @@
 min-metadata-service
 ====================
 
-This is a minimal implementation of the AWS metadata API in C; at
-present, it only implements the
+This is a minimal client implementation of the AWS metadata API in C;
+at present, it only implements the
 `/2009-04-04/meta-data/public-keys/0/openssh-key` request.
 
 Dependencies
