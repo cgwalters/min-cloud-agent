@@ -1,9 +1,9 @@
 [Unit]
 Description=Process OpenStack/AWS metadata
+Before=multi-user.target
 
 [Service]
 Type=oneshot
-Before=multi-user.target
 ExecStart=@libexecdir@/min-metadata-service
 
 [Install]

@@ -10,6 +10,7 @@ BuildRequires: autoconf automake libtool
 BuildRequires: pkgconfig(gio-unix-2.0)
 BuildRequires: pkgconfig(libgsystem)
 BuildRequires: pkgconfig(libsoup-2.4)
+BuildRequires: pkgconfig(systemd)
 
 %description
 Client implementation of a small subset of the AWS metadata service API.
