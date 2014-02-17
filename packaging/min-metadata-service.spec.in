@@ -3,7 +3,7 @@ Version:        2014.1
 Release:        1%{?dist}
 Summary:        Minimal metadata service
 Group:          System Environment/Base
-License:        GPLv2+
+License:        LGPLv2+
 URL:            https://github.com/cgwalters/rpm-ostree
 Source0:        %{name}-%{version}.tar.xz
 BuildRequires: autoconf automake libtool
