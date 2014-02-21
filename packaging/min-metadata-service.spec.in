@@ -1,19 +1,26 @@
 Name:           min-metadata-service
 Version:        2014.1
 Release:        1%{?dist}
-Summary:        Minimal metadata service
+Summary:        Minimal client implementation of EC2/OpenStack metadata API
 Group:          System Environment/Base
 License:        LGPLv2+
 URL:            https://github.com/cgwalters/rpm-ostree
+#VCS:		https://github.com/cgwalters/rpm-ostree
+# This tarball is generated via "make -f Makefile.dist-packaging dist-snapshot"
 Source0:        %{name}-%{version}.tar.xz
 BuildRequires: autoconf automake libtool
 BuildRequires: pkgconfig(gio-unix-2.0)
 BuildRequires: pkgconfig(libgsystem)
 BuildRequires: pkgconfig(libsoup-2.4)
 BuildRequires: pkgconfig(systemd)
+Requires:      systemd
+Requires(post): systemd-units
+Requires(preun): systemd-units
+Requires(postun): systemd-units
 
 %description
-Client implementation of a small subset of the AWS metadata service API.
+Client implementation of a small subset of the metadata service API.
+At present, only SSH key provisioning is implemented.
 
 %prep
 %setup -q
@@ -24,12 +31,8 @@ env NOCONFIGURE=1 ./autogen.sh
 make %{?_smp_mflags}
 
 %install
-rm -rf $RPM_BUILD_ROOT
 make install INSTALL='install -p' DESTDIR=$RPM_BUILD_ROOT
 find $RPM_BUILD_ROOT -name '*.la' -exec rm -f {} ';'
-
-%clean
-rm -rf $RPM_BUILD_ROOT
 
 %post
 %systemd_post min-metadata.service
@@ -38,7 +41,6 @@ rm -rf $RPM_BUILD_ROOT
 %systemd_preun min-metadata.service
 
 %files
-%defattr(-,root,root,-)
 %doc COPYING
 %{_libexecdir}/min-metadata-service
 %{_prefix}/lib/systemd/system/min-metadata.service
