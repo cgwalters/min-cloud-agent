@@ -1,6 +1,5 @@
 [Unit]
 Description=Process OpenStack/AWS metadata
-Before=multi-user.target
 
 [Service]
 Type=oneshot
