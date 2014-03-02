@@ -192,6 +192,8 @@ main (int argc, char **argv)
   GCancellable *cancellable = NULL;
   const char *src_address;
 
+  g_setenv ("GIO_USE_VFS", "local", TRUE);
+
   if (!prepare_root_ssh (cancellable, &self->error))
     goto out;
 
