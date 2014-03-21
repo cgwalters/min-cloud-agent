@@ -17,4 +17,10 @@ include Makefile-decls.am
 
 ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}
 
+if HAVE_SYSTEMD
+systemdservicedir = $(systemdsystemunitdir)
+systemdservice_DATA =
+endif
+
 include Makefile-min-metadata-service.am
+include Makefile-initial-setup-accounts.am

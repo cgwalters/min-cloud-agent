@@ -1,5 +1,7 @@
 [Unit]
 Description=Process OpenStack/AWS metadata
+ConditionPathExists=!/root/.ssh/authorized_keys
+ConditionPathExists=!/var/initial-setup-accounts/done
 
 [Service]
 Type=oneshot

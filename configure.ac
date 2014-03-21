@@ -27,6 +27,7 @@ AC_SUBST(WARN_CFLAGS)
 LT_PREREQ([2.2.4])
 LT_INIT([disable-static])
 
+PKG_CHECK_MODULES(BUILDDEP_LIBGSYSTEM, [libgsystem])
 PKG_CHECK_MODULES(BUILDDEP_MMS, [gio-unix-2.0 libsoup-2.4 >= 2.42.2 libgsystem])
 
 AC_ARG_WITH([systemdsystemunitdir],
