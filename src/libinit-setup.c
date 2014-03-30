@@ -27,25 +27,43 @@
 
 #define LIBINIT_SETUP_MONITORING_FAILED_ID "ffd4acb785f0976aeefca95d6433abb8"
 
-GSource *
-libinit_setup_create_root_ssh_keys_source (void)
+
+gboolean
+libinit_setup_query_ssh_authorized_keys (gboolean      *out_exists,
+                                         GFileMonitor **out_monitor,
+                                         GCancellable  *cancellable,
+                                         GError       **error)
 {
+  gboolean ret = FALSE;
   gs_unref_object GFile *authorized_keys =
     g_file_new_for_path (LIBINIT_SETUP_ROOT_SSH_KEY_PATH);
+  gs_unref_object GFileMonitor *ret_monitor = NULL;
   GFileMonitor *monitor;
-  GError *local_error = NULL;
 
   if (g_file_query_exists (authorized_keys, NULL))
-    return g_timeout_source_new (0);
+    {
+      *out_exists = TRUE;
+    }
+  else
+    {
+      gs_unref_object GFile *parentdir = g_file_get_parent (authorized_keys);
+      
+      if (g_file_query_exists (parentdir, NULL))
+        {
+          monitor = g_file_monitor_file (authorized_keys, 0, NULL, &local_error);
+        }
+      else
+        {
+        }
 
-  monitor = g_file_monitor_file (authorized_keys, 0, NULL, NULL);
   if (!monitor)
     {
-      gs_log_structr
+      gs_log_structured_print_id_v (LIBINIT_SETUP_MONITORING_FAILED_ID,
+                                    "Failed to monitor '%s': %s",
+                                    gs_file_get_path_cached (authorized_keys),
+                                    local_error->message);
+      g_error_free (local_error);
       return g_timeout_source_new (0);
-
-				 
-
-
-
+    }
+  g_signal_connect (monitor, "changed", G_CALLBACK (on_authorized_keys_changed), 
 }

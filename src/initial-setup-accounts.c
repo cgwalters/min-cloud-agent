@@ -30,7 +30,7 @@
 #define INITIAL_SETUP_DONE_MSGID "73de127e872e6c6e1a46160a6cc286b5"
 
 typedef struct {
-  GFile *initial_setup_done;
+  GFile *initial_setup_done_file;
 } InitialSetupAppData;
 
 static GHashTable *
@@ -156,6 +156,15 @@ initial_setup_finish (GApplication         *app,
 {
   g_return_val_if_fail (g_task_is_valid (result, app), FALSE);
   return g_task_propagate_boolean ((GTask*)result, error);
+}
+
+static void
+on_initial_setup_complete (GObject          *src,
+                           GAsyncResult     *result,
+                           gpointer          user_data)
+{
+
+
 }
 
 static gboolean
