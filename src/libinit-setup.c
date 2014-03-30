@@ -25,12 +25,27 @@
 #include <unistd.h>
 #include <gio/gio.h>
 
+#define LIBINIT_SETUP_MONITORING_FAILED_ID "ffd4acb785f0976aeefca95d6433abb8"
+
 GSource *
-libinit_setup_on_have_root_ssh_keys (GFunc           func,
-				     gpointer        user_data)
+libinit_setup_create_root_ssh_keys_source (void)
 {
   gs_unref_object GFile *authorized_keys =
     g_file_new_for_path (LIBINIT_SETUP_ROOT_SSH_KEY_PATH);
-  gs_unr
+  GFileMonitor *monitor;
+  GError *local_error = NULL;
+
+  if (g_file_query_exists (authorized_keys, NULL))
+    return g_timeout_source_new (0);
+
+  monitor = g_file_monitor_file (authorized_keys, 0, NULL, NULL);
+  if (!monitor)
+    {
+      gs_log_structr
+      return g_timeout_source_new (0);
+
+				 
+
+
 
 }

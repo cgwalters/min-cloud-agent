@@ -67,10 +67,11 @@ parse_os_release (const char *contents,
   return ret;
 }
 
-static gboolean
+static void
 do_initial_setup_thread (GTask           *task,
                          gpointer         source_object,
-                         gpointer         task_data)
+                         gpointer         task_data,
+                         GCancellable    *cancellable)
 {
   gboolean ret = FALSE;
   GError *local_error = NULL;
@@ -130,7 +131,10 @@ do_initial_setup_thread (GTask           *task,
 
   ret = TRUE;
  out:
-  return ret;
+  if (ret)
+    g_task_return_boolean (task, ret);
+  else
+    g_task_return_error (task, local_error);
 }
 
 static void
@@ -203,9 +207,9 @@ main (int    argc,
 
   g_setenv ("GIO_USE_VFS", "local", TRUE);
 
-  app = g_application_new (NULL, G_APPLICATION_NONUNIQUE);
+  app = g_application_new (NULL, G_APPLICATION_NON_UNIQUE);
   appdata = g_new0 (InitialSetupAppData, 1);
-  appdata->initial_setup_done_file = g_file_new_for_path ("/var/initial-setup-accounts/done");
+  appdata->initial_setup_done_file = g_file_new_for_path ("/var/lib/initial-setup-accounts/done");
 
   if (g_file_query_exists (appdata->initial_setup_done_file, NULL))
     goto out;

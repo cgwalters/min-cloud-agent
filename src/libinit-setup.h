@@ -26,8 +26,7 @@ G_BEGIN_DECLS
 
 #define LIBINIT_SETUP_ROOT_SSH_KEY_PATH "/root/.ssh/authorized_keys"
 
-GSource *libinit_setup_on_have_root_ssh_keys (GFunc         func,
-					      gpointer      user_data);
+GSource *libinit_setup_on_have_root_ssh_keys (void)
 
 G_END_DECLS
 
