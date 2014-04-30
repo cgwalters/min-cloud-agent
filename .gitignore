@@ -1,0 +1,17 @@
+# build-related stuff
+aclocal.m4
+.deps/*
+autom4te.cache/*
+build-aux/*
+libtool
+m4/*
+Makefile
+Makefile.in
+stamp-h1
+config.*
+configure
+
+# binaries and other output
+min-metadata-service
+min-metadata.service
+min_metadata_service-min-metadata-service.o
