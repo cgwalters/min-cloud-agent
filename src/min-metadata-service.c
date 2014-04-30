@@ -67,7 +67,7 @@ do_one_attempt (gpointer user_data)
   soup_uri_free (uri);
   if (!request)
     goto out;
-  
+
   instream = soup_request_send (request, NULL, &local_error);
   if (!instream)
     goto out;
@@ -120,9 +120,9 @@ static void
 recheck_metadata_reachability (MinMetadataServiceApp *self)
 {
   gboolean available = g_network_monitor_can_reach (self->netmon,
-						    (GSocketConnectable*)self->addr_port,
-						    NULL,
-						    NULL);
+                                                   (GSocketConnectable*)self->addr_port,
+                                                   NULL,
+                                                   NULL);
   if (available == self->metadata_available)
     return;
 
@@ -131,10 +131,10 @@ recheck_metadata_reachability (MinMetadataServiceApp *self)
   if (!self->metadata_available)
     {
       if (self->do_one_attempt_id)
-	{
-	  g_source_remove (self->do_one_attempt_id);
-	  self->do_one_attempt_id = 0;
-	}
+        {
+          g_source_remove (self->do_one_attempt_id);
+          self->do_one_attempt_id = 0;
+        }
       return;
     }
   else if (self->do_one_attempt_id == 0)
@@ -147,8 +147,8 @@ recheck_metadata_reachability (MinMetadataServiceApp *self)
 
 static void
 on_network_changed (GNetworkMonitor  *monitor,
-		    gboolean          available,
-		    gpointer          user_data)
+                   gboolean          available,
+                   gpointer          user_data)
 {
   MinMetadataServiceApp *self = user_data;
   recheck_metadata_reachability (self);
@@ -212,8 +212,8 @@ main (int argc, char **argv)
                                                        NULL);
 
   g_signal_connect (self->netmon, "network-changed",
-		    G_CALLBACK (on_network_changed),
-		    self);
+                   G_CALLBACK (on_network_changed),
+                   self);
   recheck_metadata_reachability (self);
 
   while (self->running && self->error == NULL)
