@@ -29,3 +29,15 @@ Why not shell script?
 Shell is OK for about 10 lines of code.  Beyond that, one should
 really turn to real programming languages.  C is fine for this, and
 GLib makes it pleasant enough.
+
+Contributing
+------------
+
+Github pull requests are fine, you can also just email patches
+directly to `walters@verbum.org`.
+
+License
+-------
+
+min-metadata-service is licensed under the LGPLv2+.  See the COPYING
+file for more information.
