@@ -1,5 +1,6 @@
 [Unit]
 Description=Process OpenStack/AWS metadata
+ConditionPathExists=!/var/lib/min-cloud-agent/done.stamp
 
 [Service]
 Type=oneshot

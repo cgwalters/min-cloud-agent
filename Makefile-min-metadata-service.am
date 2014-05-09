@@ -20,7 +20,7 @@ libexec_PROGRAMS += min-metadata-service
 min_metadata_service_SOURCES = \
 	src/min-metadata-service.c \
 	$(NULL)
-min_metadata_service_CFLAGS = $(BUILDDEP_MMS_CFLAGS) -I$(srcdir)/src
+min_metadata_service_CFLAGS = $(BUILDDEP_MMS_CFLAGS) -I$(srcdir)/src -DMIN_CLOUD_AGENT_STATEDIR=\"$(localstatedir)/lib/min-cloud-agent\"
 min_metadata_service_LDADD = $(BUILDDEP_MMS_LIBS)
 
 systemdservice_in_files = src/min-metadata.service.in
@@ -31,3 +31,8 @@ systemdservice_DATA     = min-metadata.service
 min-metadata.service: src/min-metadata.service.in Makefile
 	$(AM_V_GEN) sed -e "s|\@libexecdir\@|$(libexecdir)|" $< > $@.tmp && mv $@.tmp $@
 endif
+
+install-localstatedir-hook:
+	mkdir -p -m 0700 $(DESTDIR)$(localstatedir)/lib/min-cloud-agent
+
+INSTALL_DATA_HOOKS += install-localstatedir-hook
