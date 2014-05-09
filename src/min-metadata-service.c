@@ -21,15 +21,29 @@
 #include "string.h"
 
 #include <gio/gio.h>
+#include <gio/gunixoutputstream.h>
 #define LIBSOUP_USE_UNSTABLE_REQUEST_API
 #include <libsoup/soup.h>
 #include <libsoup/soup-request-http.h>
 
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
 #include "libgsystem.h"
 
 #define MMS_KEY_INSTALLED_SUCCESS_ID "79d8b3e43cf9583435de95a9c20e24bc"
+#define MMS_EXECUTING_USERDATA_ID    "0b6c7d9e88478c8cb1f95e4f7da4ed2a"
+#define MMS_NOT_FOUND_ID             "7a7746250bdb1c11706883f0920e423c"
 #define MMS_REQUEST_FAILED_ID        "ad5105612b8dd30800c2a29b12aabf3f"
 #define MMS_TIMEOUT_ID               "d5684567f7d4843dac78ed23ee480163"
+
+typedef enum {
+  MMS_STATE_OPENSSH_KEY = 0,
+  MMS_STATE_USER_DATA,
+  MMS_STATE_DONE
+} MmsState;
 
 typedef struct {
   gboolean running;
@@ -42,7 +56,84 @@ typedef struct {
   GError *error;
   guint do_one_attempt_id;
   guint request_failure_count;
+
+  MmsState state;
 } MinMetadataServiceApp;
+
+static gboolean
+handle_install_authorized_keys (MinMetadataServiceApp      *self,
+                                GInputStream               *instream,
+                                GCancellable               *cancellable,
+                                GError                    **error)
+{
+  gboolean ret = FALSE;
+  gs_unref_object GFile *authorized_keys_path = g_file_new_for_path ("/root/.ssh/authorized_keys");
+  gs_unref_object GOutputStream *outstream = NULL;
+
+  outstream = (GOutputStream*)g_file_append_to (authorized_keys_path, 0, cancellable, error);
+  if (!outstream)
+    {
+      g_prefix_error (error, "Appending to '%s': ",
+                      gs_file_get_path_cached (authorized_keys_path));
+      goto out;
+    }
+  if (0 > g_output_stream_splice ((GOutputStream*)outstream, instream,
+                                  G_OUTPUT_STREAM_SPLICE_CLOSE_TARGET |
+                                  G_OUTPUT_STREAM_SPLICE_CLOSE_SOURCE,
+                                  self->cancellable, error))
+    goto out;
+
+  gs_log_structured_print_id_v (MMS_KEY_INSTALLED_SUCCESS_ID,
+                                "Successfully installed ssh key for '%s'",
+                                "root");
+
+  ret = TRUE;
+ out:
+  return ret;
+}
+
+static gboolean
+handle_userdata_script (MinMetadataServiceApp      *self,
+                        GInputStream               *instream,
+                        GCancellable               *cancellable,
+                        GError                    **error)
+{
+  gboolean ret = FALSE;
+  gs_free char *tmppath = g_strdup ("/var/tmp/cloud-userdata-script.XXXXXX");
+  char *child_argv[] = { "/usr/bin/systemd-run", tmppath, NULL };
+  gs_unref_object GOutputStream *outstream = NULL;
+  int fd, estatus;
+
+  fd = g_mkstemp_full (tmppath, O_WRONLY, 0700);
+  if (fd == -1)
+    {
+      int errsv = errno;
+      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
+                   "Failed to create temporary userdata script: %s",
+                   g_strerror (errsv));
+      goto out;
+    }
+  outstream = g_unix_output_stream_new (fd, TRUE);
+
+  if (0 > g_output_stream_splice ((GOutputStream*)outstream, instream,
+                                  G_OUTPUT_STREAM_SPLICE_CLOSE_TARGET |
+                                  G_OUTPUT_STREAM_SPLICE_CLOSE_SOURCE,
+                                  self->cancellable, error))
+    goto out;
+
+  gs_log_structured_print_id_v (MMS_EXECUTING_USERDATA_ID,
+                                "Executing user data script");
+
+  /* systemd-run is actually asynchronous */
+  if (!g_spawn_sync ("/", child_argv, NULL, 0, NULL, NULL, NULL, NULL, &estatus, error))
+    goto out;
+  if (!g_spawn_check_exit_status (estatus, error))
+    goto out;
+
+  ret = TRUE;
+ out:
+  return ret;
+}
 
 static gboolean
 do_one_attempt (gpointer user_data)
@@ -50,18 +141,39 @@ do_one_attempt (gpointer user_data)
   GError *local_error = NULL;
   MinMetadataServiceApp *self = user_data;
   gs_unref_object SoupRequest *request = NULL;
-  gs_free char *uri_str = NULL;
-  gs_free char *addr_str = NULL;
   gs_unref_object GInputStream *instream = NULL;
   gs_unref_object GFileOutputStream *outstream = NULL;
   gs_unref_object GFile *authorized_keys_path = NULL;
+  gs_unref_object SoupMessage *msg = NULL;
   SoupURI *uri = NULL;
   const int max_request_failures = 5;
+  const char *state_description = NULL;
 
-  addr_str = g_inet_address_to_string (self->addr);
-  uri_str = g_strconcat ("http://", addr_str, "/2009-04-04/meta-data/public-keys/0/openssh-key", NULL);
-  uri = soup_uri_new (uri_str);
-  g_print ("Requesting '%s'...\n", uri_str);
+  uri = soup_uri_new (NULL);
+  soup_uri_set_scheme (uri, "http");
+  {
+    gs_free char *addr_str = g_inet_address_to_string (self->addr);
+    soup_uri_set_host (uri, addr_str);
+  }
+  soup_uri_set_port (uri, g_inet_socket_address_get_port (self->addr_port));
+  switch (self->state)
+    {
+    case MMS_STATE_OPENSSH_KEY:
+      soup_uri_set_path (uri, "/2009-04-04/meta-data/public-keys/0/openssh-key");
+      state_description = "openssh-key";
+      break;
+    case MMS_STATE_USER_DATA:
+      soup_uri_set_path (uri, "/2009-04-04/user-data");
+      state_description = "user-data";
+      break;
+    case MMS_STATE_DONE:
+      g_assert_not_reached ();
+    }
+
+  {
+    gs_free char *uri_str = soup_uri_to_string (uri, FALSE);
+    g_print ("Requesting '%s'...\n", uri_str);
+  }
 
   request = soup_session_request_uri (self->session, uri, &local_error);
   soup_uri_free (uri);
@@ -72,23 +184,40 @@ do_one_attempt (gpointer user_data)
   if (!instream)
     goto out;
 
-  authorized_keys_path = g_file_new_for_path ("/root/.ssh/authorized_keys");
-  outstream = g_file_append_to (authorized_keys_path, 0, self->cancellable, &local_error);
-  if (!outstream)
+  msg = soup_request_http_get_message ((SoupRequestHTTP*) request);
+  if (!SOUP_STATUS_IS_SUCCESSFUL (msg->status_code))
     {
-      g_prefix_error (&local_error, "Appending to '%s': ",
-                      gs_file_get_path_cached (authorized_keys_path));
-      goto out;
+      switch (msg->status_code)
+        {
+        case 404:
+        case 410:
+          {
+            gs_log_structured_print_id_v (MMS_NOT_FOUND_ID, "No %s found", state_description);
+            g_clear_error (&local_error);
+            /* Note fallthrough to out, where we'll advance to the
+               next state */
+            goto out;
+          }
+        default:
+          goto out;
+        }
     }
-  if (0 > g_output_stream_splice ((GOutputStream*)outstream, instream,
-                                  G_OUTPUT_STREAM_SPLICE_CLOSE_TARGET |
-                                  G_OUTPUT_STREAM_SPLICE_CLOSE_SOURCE,
-                                  self->cancellable, &local_error))
-    goto out;
 
-  gs_log_structured_print_id_v (MMS_KEY_INSTALLED_SUCCESS_ID,
-                                "Successfully installed ssh key for '%s'",
-                                "root");
+  switch (self->state)
+    {
+    case MMS_STATE_OPENSSH_KEY:
+      if (!handle_install_authorized_keys (self, instream, self->cancellable,
+                                           &local_error))
+        goto out;
+      break;
+    case MMS_STATE_USER_DATA:
+      if (!handle_userdata_script (self, instream, self->cancellable,
+                                   &local_error))
+        goto out;
+      break;
+    default:
+      g_assert_not_reached ();
+    }
 
  out:
   if (local_error)
@@ -113,6 +242,22 @@ do_one_attempt (gpointer user_data)
                                                            do_one_attempt, self);
         }
     }
+  else
+    {
+      g_assert (self->state != MMS_STATE_DONE);
+      self->state++;
+      /* If we advanced in state, schedule the next callback in an
+       * idle so we're consistently scheduled out of an idle.
+       */
+      if (self->state != MMS_STATE_DONE)
+        self->do_one_attempt_id = g_idle_add (do_one_attempt, self);
+      else
+        {
+          self->do_one_attempt_id = 0;
+          self->running = FALSE;
+        }
+    }
+
   return FALSE;
 }
 
