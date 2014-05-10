@@ -150,6 +150,7 @@ do_one_attempt (gpointer user_data)
 {
   GError *local_error = NULL;
   MinMetadataServiceApp *self = user_data;
+  gs_free char *uri_str = NULL;
   gs_unref_object SoupRequest *request = NULL;
   gs_unref_object GInputStream *instream = NULL;
   gs_unref_object GFileOutputStream *outstream = NULL;
@@ -180,10 +181,8 @@ do_one_attempt (gpointer user_data)
       g_assert_not_reached ();
     }
 
-  {
-    gs_free char *uri_str = soup_uri_to_string (uri, FALSE);
-    g_print ("Requesting '%s'...\n", uri_str);
-  }
+  uri_str = soup_uri_to_string (uri, FALSE);
+  g_print ("Requesting '%s'...\n", uri_str);
 
   request = soup_session_request_uri (self->session, uri, &local_error);
   soup_uri_free (uri);
@@ -209,20 +208,28 @@ do_one_attempt (gpointer user_data)
             goto out;
           }
         default:
+          /* Don't actually set the error, we will just continue to
+           * the next phase.
+           */
+          gs_log_structured_print_id_v (MMS_TIMEOUT_ID,
+                                        "Error fetching %s: %u %s",
+                                        uri_str,
+                                        msg->status_code,
+                                        soup_status_get_phrase (msg->status_code));
           goto out;
         }
     }
 
   switch (self->state)
     {
-    case MMS_STATE_OPENSSH_KEY:
-      if (!handle_install_authorized_keys (self, instream, self->cancellable,
-                                           &local_error))
-        goto out;
-      break;
     case MMS_STATE_USER_DATA:
       if (!handle_userdata_script (self, instream, self->cancellable,
                                    &local_error))
+        goto out;
+      break;
+    case MMS_STATE_OPENSSH_KEY:
+      if (!handle_install_authorized_keys (self, instream, self->cancellable,
+                                           &local_error))
         goto out;
       break;
     default:
