@@ -8,13 +8,31 @@ management tools.
 At present, it implements a very small subset of the AWS EC2 metadata API.
 The list of requests implemented is:
 
-	`/2009-04-04/meta-data/public-keys/0/openssh-key`: Provision a single ssh key to the `root` account
+ * `/2009-04-04/user-data`: Execute arbitrary script (must start with #!)
+ * `/2009-04-04/meta-data/public-keys/0/openssh-key`: Provision a single ssh key to the `root` account
 
-In the near future, it will also implement the `user-data` request,
-just for shell script.  This will allow you to directly call into the
-operating system tools (like package managers) to install e.g.  Ruby
-or Python for a configuration management tool, or to use `curl` to
-download further code.
+In contrast to cloud-init, the user-data must be an interpreted
+program; it can not be the YAML cloud-config, have includes, or
+anything like that.
+
+For example, suppose you want to add a user to the system.  Rather
+than using cloud init's "users" attribute in the cloud-config YAML,
+you should simply invoke the operating system native tool,
+e.g. `/usr/sbin/useradd` directly in a shell script.
+
+It's strongly recommended that all operating system vendors shipping
+min-cloud-agent include the `curl` utility.  This will allow user-data
+script authors to download further code from a URL, or perform a POST
+to registration/state server announcing that the system is online.
+
+Another very useful thing to do in user-data is to call into the
+system software management (e.g. yum/apt-get/rpm-ostree) to perform
+upgrades or install further applications (such as Docker) or higher
+level configuration management tools (such as Puppet).
+
+min-cloud-agent will never grow an abstraction layer for any of these
+things; if you are scripting multiple operating systems or versions,
+your userdata scripts must carry the abstractions.
 
 Dependencies
 ------------
