@@ -5,7 +5,7 @@ In contrast to cloud-init, the vision of this project is to be an
 ultra-small bootstrapping stage that one can use to start other
 management tools.
 
-At present, it implements a very small subset AWS EC2 metadata API.
+At present, it implements a very small subset of the AWS EC2 metadata API.
 The list of requests implemented is:
 
 	`/2009-04-04/meta-data/public-keys/0/openssh-key`: Provision a single ssh key to the `root` account
@@ -25,8 +25,9 @@ Dependencies
 Planned features
 ----------------
 
- * hostname
  * user-data
+ * configurable account for ssh keys
+ * hostname
 
 Why create this instead of just using `cloud-init`?
 ---------------------------------------------------
