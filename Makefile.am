@@ -17,4 +17,4 @@ include Makefile-decls.am
 
 ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}
 
-include Makefile-min-metadata-service.am
+include Makefile-min-cloud-agent.am

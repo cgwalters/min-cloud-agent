@@ -33,19 +33,19 @@
 
 #include "libgsystem.h"
 
-#define MMS_KEY_INSTALLED_SUCCESS_ID "79d8b3e43cf9583435de95a9c20e24bc"
-#define MMS_USERDATA_SUCCESS_ID      "51b4385a57d62c2db67c1a4a9de2776c"
-#define MMS_USERDATA_EXECUTING_ID    "0b6c7d9e88478c8cb1f95e4f7da4ed2a"
-#define MMS_USERDATA_FAILED_ID       "fbe69d44d6f0471b6d585bff2ba89cd0"
-#define MMS_NOT_FOUND_ID             "7a7746250bdb1c11706883f0920e423c"
-#define MMS_REQUEST_FAILED_ID        "ad5105612b8dd30800c2a29b12aabf3f"
-#define MMS_TIMEOUT_ID               "d5684567f7d4843dac78ed23ee480163"
+#define MCA_KEY_INSTALLED_SUCCESS_ID "79d8b3e43cf9583435de95a9c20e24bc"
+#define MCA_USERDATA_SUCCESS_ID      "51b4385a57d62c2db67c1a4a9de2776c"
+#define MCA_USERDATA_EXECUTING_ID    "0b6c7d9e88478c8cb1f95e4f7da4ed2a"
+#define MCA_USERDATA_FAILED_ID       "fbe69d44d6f0471b6d585bff2ba89cd0"
+#define MCA_NOT_FOUND_ID             "7a7746250bdb1c11706883f0920e423c"
+#define MCA_REQUEST_FAILED_ID        "ad5105612b8dd30800c2a29b12aabf3f"
+#define MCA_TIMEOUT_ID               "d5684567f7d4843dac78ed23ee480163"
 
 typedef enum {
-  MMS_STATE_USER_DATA = 0,
-  MMS_STATE_OPENSSH_KEY,
-  MMS_STATE_DONE
-} MmsState;
+  MCA_STATE_USER_DATA = 0,
+  MCA_STATE_OPENSSH_KEY,
+  MCA_STATE_DONE
+} McaState;
 
 typedef struct {
   gboolean running;
@@ -63,11 +63,11 @@ typedef struct {
   GFile *userdata_done_stamp;
   GFile *authorized_keys_path;
 
-  MmsState state;
-} MinMetadataServiceApp;
+  McaState state;
+} MinCloudAgentApp;
 
 static gboolean
-handle_install_authorized_keys (MinMetadataServiceApp      *self,
+handle_install_authorized_keys (MinCloudAgentApp      *self,
                                 GInputStream               *instream,
                                 GCancellable               *cancellable,
                                 GError                    **error)
@@ -135,7 +135,7 @@ handle_install_authorized_keys (MinMetadataServiceApp      *self,
   if (!g_output_stream_flush (outstream, cancellable, error))
     goto out;
 
-  gs_log_structured_print_id_v (MMS_KEY_INSTALLED_SUCCESS_ID,
+  gs_log_structured_print_id_v (MCA_KEY_INSTALLED_SUCCESS_ID,
                                 "Successfully installed ssh key for '%s'",
                                 "root");
 
@@ -145,7 +145,7 @@ handle_install_authorized_keys (MinMetadataServiceApp      *self,
 }
 
 static gboolean
-handle_userdata_script (MinMetadataServiceApp      *self,
+handle_userdata_script (MinCloudAgentApp      *self,
                         GInputStream               *instream,
                         GCancellable               *cancellable,
                         GError                    **error)
@@ -172,7 +172,7 @@ handle_userdata_script (MinMetadataServiceApp      *self,
                                   self->cancellable, error))
     goto out;
 
-  gs_log_structured_print_id_v (MMS_USERDATA_EXECUTING_ID,
+  gs_log_structured_print_id_v (MCA_USERDATA_EXECUTING_ID,
                                 "Executing user data script");
 
   if (!gs_subprocess_simple_run_sync (NULL, GS_SUBPROCESS_STREAM_DISPOSITION_NULL,
@@ -180,12 +180,12 @@ handle_userdata_script (MinMetadataServiceApp      *self,
                                       tmppath,
                                       NULL))
     {
-      gs_log_structured_print_id_v (MMS_USERDATA_FAILED_ID,
+      gs_log_structured_print_id_v (MCA_USERDATA_FAILED_ID,
                                     "User data script failed");
       goto out;
     }
 
-  gs_log_structured_print_id_v (MMS_USERDATA_SUCCESS_ID,
+  gs_log_structured_print_id_v (MCA_USERDATA_SUCCESS_ID,
                                 "User data script suceeded");
   
   if (!g_file_replace_contents (self->userdata_done_stamp, "done\n", 5,
@@ -203,7 +203,7 @@ static gboolean
 do_one_attempt (gpointer user_data)
 {
   GError *local_error = NULL;
-  MinMetadataServiceApp *self = user_data;
+  MinCloudAgentApp *self = user_data;
   gs_free char *uri_str = NULL;
   gs_unref_object SoupRequest *request = NULL;
   gs_unref_object GInputStream *instream = NULL;
@@ -218,21 +218,21 @@ do_one_attempt (gpointer user_data)
  again:
   switch (self->state)
     {
-    case MMS_STATE_USER_DATA:
+    case MCA_STATE_USER_DATA:
       if (g_file_query_exists (self->userdata_done_stamp, NULL))
         {
           self->state++;
           goto again;
         }
       break;
-    case MMS_STATE_OPENSSH_KEY:
+    case MCA_STATE_OPENSSH_KEY:
       if (g_file_query_exists (self->authorized_keys_path, NULL))
         {
           self->state++;
           goto again;
         }
       break;
-    case MMS_STATE_DONE:
+    case MCA_STATE_DONE:
       goto out;
     }
 
@@ -245,15 +245,15 @@ do_one_attempt (gpointer user_data)
   soup_uri_set_port (uri, g_inet_socket_address_get_port (self->addr_port));
   switch (self->state)
     {
-    case MMS_STATE_USER_DATA:
+    case MCA_STATE_USER_DATA:
       soup_uri_set_path (uri, "/2009-04-04/user-data");
       state_description = "user-data";
       break;
-    case MMS_STATE_OPENSSH_KEY:
+    case MCA_STATE_OPENSSH_KEY:
       soup_uri_set_path (uri, "/2009-04-04/meta-data/public-keys/0/openssh-key");
       state_description = "openssh-key";
       break;
-    case MMS_STATE_DONE:
+    case MCA_STATE_DONE:
       g_assert_not_reached ();
     }
 
@@ -277,7 +277,7 @@ do_one_attempt (gpointer user_data)
         case 404:
         case 410:
           {
-            gs_log_structured_print_id_v (MMS_NOT_FOUND_ID, "No %s found", state_description);
+            gs_log_structured_print_id_v (MCA_NOT_FOUND_ID, "No %s found", state_description);
             g_clear_error (&local_error);
             /* Note fallthrough to out, where we'll advance to the
                next state */
@@ -287,7 +287,7 @@ do_one_attempt (gpointer user_data)
           /* Don't actually set the error, we will just continue to
            * the next phase.
            */
-          gs_log_structured_print_id_v (MMS_TIMEOUT_ID,
+          gs_log_structured_print_id_v (MCA_TIMEOUT_ID,
                                         "Error fetching %s: %u %s",
                                         uri_str,
                                         msg->status_code,
@@ -298,12 +298,12 @@ do_one_attempt (gpointer user_data)
 
   switch (self->state)
     {
-    case MMS_STATE_USER_DATA:
+    case MCA_STATE_USER_DATA:
       if (!handle_userdata_script (self, instream, self->cancellable,
                                    &local_error))
         goto out;
       break;
-    case MMS_STATE_OPENSSH_KEY:
+    case MCA_STATE_OPENSSH_KEY:
       if (!handle_install_authorized_keys (self, instream, self->cancellable,
                                            &local_error))
         goto out;
@@ -312,7 +312,7 @@ do_one_attempt (gpointer user_data)
       g_assert_not_reached ();
     }
 
-  g_assert (self->state != MMS_STATE_DONE);
+  g_assert (self->state != MCA_STATE_DONE);
   self->state++;
   self->request_failure_count = 0;
 
@@ -323,7 +323,7 @@ do_one_attempt (gpointer user_data)
       if (self->request_failure_count >= max_request_failures)
         {
           g_error_free (local_error);
-          gs_log_structured_print_id_v (MMS_TIMEOUT_ID,
+          gs_log_structured_print_id_v (MCA_TIMEOUT_ID,
                                         "Reached maximum failed attempts (%u) to fetch metadata",
                                         self->request_failure_count);
           self->do_one_attempt_id = 0;
@@ -331,7 +331,7 @@ do_one_attempt (gpointer user_data)
         }
       else
         {
-          gs_log_structured_print_id_v (MMS_REQUEST_FAILED_ID,
+          gs_log_structured_print_id_v (MCA_REQUEST_FAILED_ID,
                                         "Request failed (count: %u): %s", self->request_failure_count,
                                         local_error->message);
           g_error_free (local_error);
@@ -344,7 +344,7 @@ do_one_attempt (gpointer user_data)
       /* If we advanced in state, schedule the next callback in an
        * idle so we're consistently scheduled out of an idle.
        */
-      if (self->state != MMS_STATE_DONE)
+      if (self->state != MCA_STATE_DONE)
         self->do_one_attempt_id = g_idle_add (do_one_attempt, self);
       else
         {
@@ -357,7 +357,7 @@ do_one_attempt (gpointer user_data)
 }
 
 static void
-recheck_metadata_reachability (MinMetadataServiceApp *self)
+recheck_metadata_reachability (MinCloudAgentApp *self)
 {
   gboolean available = g_network_monitor_can_reach (self->netmon,
                                                    (GSocketConnectable*)self->addr_port,
@@ -390,7 +390,7 @@ on_network_changed (GNetworkMonitor  *monitor,
                    gboolean          available,
                    gpointer          user_data)
 {
-  MinMetadataServiceApp *self = user_data;
+  MinCloudAgentApp *self = user_data;
   recheck_metadata_reachability (self);
 }
 
@@ -427,8 +427,8 @@ prepare_root_ssh (GCancellable   *cancellable,
 int
 main (int argc, char **argv)
 {
-  MinMetadataServiceApp selfstruct = { 0, };
-  MinMetadataServiceApp *self = &selfstruct;
+  MinCloudAgentApp selfstruct = { 0, };
+  MinCloudAgentApp *self = &selfstruct;
   GCancellable *cancellable = NULL;
   const char *src_address;
   guint srcport = 80;
@@ -438,12 +438,12 @@ main (int argc, char **argv)
   if (!prepare_root_ssh (cancellable, &self->error))
     goto out;
 
-  src_address = g_getenv ("MIN_METADATA_ADDRESS");
+  src_address = g_getenv ("MIN_CLOUDAGENT_ADDRESS");
   if (!src_address)
     src_address = "169.254.169.254";
 
   {
-    const char *srcport_str = g_getenv ("MIN_METADATA_PORT");
+    const char *srcport_str = g_getenv ("MIN_CLOUDAGENT_PORT");
     if (srcport_str)
       srcport = (guint) g_ascii_strtoull (srcport_str, NULL, 10);
   }
@@ -453,7 +453,7 @@ main (int argc, char **argv)
   self->netmon = g_network_monitor_get_default ();
   self->cancellable = cancellable;
   self->running = TRUE;
-  self->session = soup_session_sync_new_with_options (SOUP_SESSION_USER_AGENT, "min-metadata-service ",
+  self->session = soup_session_sync_new_with_options (SOUP_SESSION_USER_AGENT, "min-cloud-agent",
                                                       SOUP_SESSION_SSL_USE_SYSTEM_CA_FILE, TRUE,
                                                       SOUP_SESSION_USE_THREAD_CONTEXT, TRUE,
                                                        NULL);

@@ -1,10 +1,10 @@
 [Unit]
-Description=Process OpenStack/AWS metadata
+Description=Process OpenStack/AWS metadata and userdata
 ConditionPathExists=!/var/lib/min-cloud-agent/done.stamp
 
 [Service]
 Type=oneshot
-ExecStart=@libexecdir@/min-metadata-service
+ExecStart=@libexecdir@/min-cloud-agent
 
 [Install]
 WantedBy=multi-user.target

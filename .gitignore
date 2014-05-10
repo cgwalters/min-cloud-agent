@@ -12,6 +12,5 @@ config.*
 configure
 
 # binaries and other output
-min-metadata-service
-min-metadata.service
-min_metadata_service-min-metadata-service.o
+min-cloud-agent
+min-cloudagent.service

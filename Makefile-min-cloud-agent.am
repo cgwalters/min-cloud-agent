@@ -15,20 +15,20 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, see <http://www.gnu.org/licenses/>.
 
-libexec_PROGRAMS += min-metadata-service
+libexec_PROGRAMS += min-cloud-agent
 
-min_metadata_service_SOURCES = \
-	src/min-metadata-service.c \
+min_cloud_agent_SOURCES = \
+	src/min-cloud-agent.c \
 	$(NULL)
-min_metadata_service_CFLAGS = $(BUILDDEP_MMS_CFLAGS) -I$(srcdir)/src -DMIN_CLOUD_AGENT_STATEDIR=\"$(localstatedir)/lib/min-cloud-agent\"
-min_metadata_service_LDADD = $(BUILDDEP_MMS_LIBS)
+min_cloud_agent_CFLAGS = $(BUILDDEP_MMS_CFLAGS) -I$(srcdir)/src -DMIN_CLOUD_AGENT_STATEDIR=\"$(localstatedir)/lib/min-cloud-agent\"
+min_cloud_agent_LDADD = $(BUILDDEP_MMS_LIBS)
 
-systemdservice_in_files = src/min-metadata.service.in
+systemdservice_in_files = src/min-cloud-agent.service.in
 
 if HAVE_SYSTEMD
 systemdservicedir       = $(systemdsystemunitdir)
-systemdservice_DATA     = min-metadata.service
-min-metadata.service: src/min-metadata.service.in Makefile
+systemdservice_DATA     = min-cloud-agent.service
+min-cloud-agent.service: src/min-cloud-agent.service.in Makefile
 	$(AM_V_GEN) sed -e "s|\@libexecdir\@|$(libexecdir)|" $< > $@.tmp && mv $@.tmp $@
 endif
 

@@ -1,5 +1,5 @@
-min-metadata-service
-====================
+min-cloud-agent
+===============
 
 In contrast to cloud-init, the vision of this project is to be an
 ultra-small bootstrapping stage that one can use to start other
@@ -38,8 +38,8 @@ what other operating system management and configuration tools like
 Puppet should do.  It means cloud-init is likely to keep growing.
 
 Beyond simply being a large program in itself, cloud-init is written
-Python, and `min-metadata-service` is targeted at small host operating
-systems that don't necessarily include Python by default.
+Python, and this agent is targeted at small host operating systems
+that don't necessarily include Python by default.
 
 Contributing
 ------------
@@ -50,5 +50,5 @@ cloud list: https://admin.fedoraproject.org/mailman/listinfo/cloud
 License
 -------
 
-min-metadata-service is licensed under the LGPLv2+.  See the COPYING
+min-cloud-agent is licensed under the LGPLv2+.  See the COPYING
 file for more information.

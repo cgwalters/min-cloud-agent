@@ -1,5 +1,5 @@
 AC_PREREQ([2.63])
-AC_INIT([min-metadata-service], [2014.3], [walters@verbum.org], [min-metadata-service], [https://github.com/cgwalters/min-metadata-service])
+AC_INIT([min-cloud-agent], [2014.4], [walters@verbum.org], [min-cloud-agent], [https://github.com/cgwalters/min-cloud-agent])
 AC_CONFIG_HEADER([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([build-aux])
