@@ -191,6 +191,7 @@ main (int argc, char **argv)
   MinMetadataServiceApp *self = &selfstruct;
   GCancellable *cancellable = NULL;
   const char *src_address;
+  guint srcport = 80;
 
   g_setenv ("GIO_USE_VFS", "local", TRUE);
 
@@ -201,8 +202,14 @@ main (int argc, char **argv)
   if (!src_address)
     src_address = "169.254.169.254";
 
+  {
+    const char *srcport_str = g_getenv ("MIN_METADATA_PORT");
+    if (srcport_str)
+      srcport = (guint) g_ascii_strtoull (srcport_str, NULL, 10);
+  }
+
   self->addr = g_inet_address_new_from_string (src_address);
-  self->addr_port = (GInetSocketAddress*)g_inet_socket_address_new (self->addr, 80);
+  self->addr_port = (GInetSocketAddress*)g_inet_socket_address_new (self->addr, srcport);
   self->netmon = g_network_monitor_get_default ();
   self->cancellable = cancellable;
   self->running = TRUE;
