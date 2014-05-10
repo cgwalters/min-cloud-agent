@@ -34,14 +34,16 @@
 #include "libgsystem.h"
 
 #define MMS_KEY_INSTALLED_SUCCESS_ID "79d8b3e43cf9583435de95a9c20e24bc"
-#define MMS_EXECUTING_USERDATA_ID    "0b6c7d9e88478c8cb1f95e4f7da4ed2a"
+#define MMS_USERDATA_SUCCESS_ID      "51b4385a57d62c2db67c1a4a9de2776c"
+#define MMS_USERDATA_EXECUTING_ID    "0b6c7d9e88478c8cb1f95e4f7da4ed2a"
+#define MMS_USERDATA_FAILED_ID       "fbe69d44d6f0471b6d585bff2ba89cd0"
 #define MMS_NOT_FOUND_ID             "7a7746250bdb1c11706883f0920e423c"
 #define MMS_REQUEST_FAILED_ID        "ad5105612b8dd30800c2a29b12aabf3f"
 #define MMS_TIMEOUT_ID               "d5684567f7d4843dac78ed23ee480163"
 
 typedef enum {
-  MMS_STATE_OPENSSH_KEY = 0,
-  MMS_STATE_USER_DATA,
+  MMS_STATE_USER_DATA = 0,
+  MMS_STATE_OPENSSH_KEY,
   MMS_STATE_DONE
 } MmsState;
 
@@ -99,8 +101,7 @@ handle_userdata_script (MinMetadataServiceApp      *self,
                         GError                    **error)
 {
   gboolean ret = FALSE;
-  gs_free char *tmppath = g_strdup ("/var/tmp/cloud-userdata-script.XXXXXX");
-  char *child_argv[] = { "/usr/bin/systemd-run", tmppath, NULL };
+  gs_free char *tmppath = g_strdup ("/var/tmp/userdata-script.XXXXXX");
   gs_unref_object GOutputStream *outstream = NULL;
   int fd, estatus;
 
@@ -121,17 +122,26 @@ handle_userdata_script (MinMetadataServiceApp      *self,
                                   self->cancellable, error))
     goto out;
 
-  gs_log_structured_print_id_v (MMS_EXECUTING_USERDATA_ID,
+  gs_log_structured_print_id_v (MMS_USERDATA_EXECUTING_ID,
                                 "Executing user data script");
 
-  /* systemd-run is actually asynchronous */
-  if (!g_spawn_sync ("/", child_argv, NULL, 0, NULL, NULL, NULL, NULL, &estatus, error))
-    goto out;
-  if (!g_spawn_check_exit_status (estatus, error))
-    goto out;
+  if (!gs_subprocess_simple_run_sync (NULL, GS_SUBPROCESS_STREAM_DISPOSITION_NULL,
+                                      cancellable, error,
+                                      tmppath,
+                                      NULL))
+    {
+      gs_log_structured_print_id_v (MMS_USERDATA_FAILED_ID,
+                                    "User data script failed");
+      goto out;
+    }
+
+  gs_log_structured_print_id_v (MMS_USERDATA_SUCCESS_ID,
+                                "User data script suceeded");
+  goto out;
 
   ret = TRUE;
  out:
+  (void) unlink (tmppath);
   return ret;
 }
 
@@ -158,13 +168,13 @@ do_one_attempt (gpointer user_data)
   soup_uri_set_port (uri, g_inet_socket_address_get_port (self->addr_port));
   switch (self->state)
     {
-    case MMS_STATE_OPENSSH_KEY:
-      soup_uri_set_path (uri, "/2009-04-04/meta-data/public-keys/0/openssh-key");
-      state_description = "openssh-key";
-      break;
     case MMS_STATE_USER_DATA:
       soup_uri_set_path (uri, "/2009-04-04/user-data");
       state_description = "user-data";
+      break;
+    case MMS_STATE_OPENSSH_KEY:
+      soup_uri_set_path (uri, "/2009-04-04/meta-data/public-keys/0/openssh-key");
+      state_description = "openssh-key";
       break;
     case MMS_STATE_DONE:
       g_assert_not_reached ();
