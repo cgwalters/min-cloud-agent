@@ -43,8 +43,8 @@ systems that don't necessarily include Python by default.
 Contributing
 ------------
 
-Github pull requests are fine, you can also just email patches
-directly to `walters@verbum.org`.
+Use Github pull requests.  You can discuss this program on the Fedora
+cloud list: https://admin.fedoraproject.org/mailman/listinfo/cloud
 
 License
 -------
