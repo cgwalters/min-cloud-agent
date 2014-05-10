@@ -5,11 +5,22 @@ In contrast to cloud-init, the vision of this project is to be an
 ultra-small bootstrapping stage that one can use to start other
 management tools.
 
-At present, it implements a very small subset of the AWS EC2 metadata API.
+At present, it implements a very small subset of the AWS EC2 metadata
+API (which is also provided by the OpenStack hypervisor).
+
 The list of requests implemented is:
 
- * `/2009-04-04/user-data`: Execute arbitrary script (must start with #!)
- * `/2009-04-04/meta-data/public-keys/0/openssh-key`: Provision a single ssh key to the `root` account
+ * `/2009-04-04/user-data`:
+
+    Execute arbitrary script (must start with #!, e.g. #!/bin/bash).  The
+    best practice is for this script to be idempotent, but min-cloud-agent
+    will make a best effort to ensure this script runs exactly once when
+    the system is first booted.
+
+ * `/2009-04-04/meta-data/public-keys/0/openssh-key`:
+
+    Provision a single ssh key to the `root` account's `.ssh/authorized_keys` file.
+    If the file already exists, it will not be modified.
 
 In contrast to cloud-init, the user-data must be an interpreted
 program; it can not be the YAML cloud-config, have includes, or
