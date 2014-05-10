@@ -59,6 +59,8 @@ typedef struct {
   guint do_one_attempt_id;
   guint request_failure_count;
 
+  GFile *authorized_keys_path;
+
   MmsState state;
 } MinMetadataServiceApp;
 
@@ -69,14 +71,13 @@ handle_install_authorized_keys (MinMetadataServiceApp      *self,
                                 GError                    **error)
 {
   gboolean ret = FALSE;
-  gs_unref_object GFile *authorized_keys_path = g_file_new_for_path ("/root/.ssh/authorized_keys");
   gs_unref_object GOutputStream *outstream = NULL;
 
-  outstream = (GOutputStream*)g_file_append_to (authorized_keys_path, 0, cancellable, error);
+  outstream = (GOutputStream*)g_file_append_to (self->authorized_keys_path, 0, cancellable, error);
   if (!outstream)
     {
       g_prefix_error (error, "Appending to '%s': ",
-                      gs_file_get_path_cached (authorized_keys_path));
+                      gs_file_get_path_cached (self->authorized_keys_path));
       goto out;
     }
   if (0 > g_output_stream_splice ((GOutputStream*)outstream, instream,
@@ -263,6 +264,16 @@ do_one_attempt (gpointer user_data)
     {
       g_assert (self->state != MMS_STATE_DONE);
       self->state++;
+
+      /* Skip over already completed states */
+      switch (self->state)
+        {
+        case MMS_STATE_OPENSSH_KEY:
+          if (g_file_query_exists (self->authorized_keys_path, NULL))
+            self->state++;
+          break;
+        }
+
       /* If we advanced in state, schedule the next callback in an
        * idle so we're consistently scheduled out of an idle.
        */
@@ -379,6 +390,7 @@ main (int argc, char **argv)
                                                       SOUP_SESSION_SSL_USE_SYSTEM_CA_FILE, TRUE,
                                                       SOUP_SESSION_USE_THREAD_CONTEXT, TRUE,
                                                        NULL);
+  self->authorized_keys_path = g_file_new_for_path ("/root/.ssh/authorized_keys");
 
   g_signal_connect (self->netmon, "network-changed",
                    G_CALLBACK (on_network_changed),
