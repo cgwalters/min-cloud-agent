@@ -103,7 +103,7 @@ handle_userdata_script (MinMetadataServiceApp      *self,
   gboolean ret = FALSE;
   gs_free char *tmppath = g_strdup ("/var/tmp/userdata-script.XXXXXX");
   gs_unref_object GOutputStream *outstream = NULL;
-  int fd, estatus;
+  int fd;
 
   fd = g_mkstemp_full (tmppath, O_WRONLY, 0700);
   if (fd == -1)
