@@ -1,9 +1,20 @@
 min-metadata-service
 ====================
 
-This is a minimal client implementation of the AWS metadata API in C;
-at present, it only implements the
-`/2009-04-04/meta-data/public-keys/0/openssh-key` request.
+In contrast to cloud-init, the vision of this project is to be an
+ultra-small bootstrapping stage that one can use to start other
+management tools.
+
+At present, it implements a very small subset AWS EC2 metadata API.
+The list of requests implemented is:
+
+	`/2009-04-04/meta-data/public-keys/0/openssh-key`: Provision a single ssh key to the `root` account
+
+In the near future, it will also implement the `user-data` request,
+just for shell script.  This will allow you to directly call into the
+operating system tools (like package managers) to install e.g.  Ruby
+or Python for a configuration management tool, or to use `curl` to
+download further code.
 
 Dependencies
 ------------
@@ -15,20 +26,19 @@ Planned features
 ----------------
 
  * hostname
+ * user-data
 
-Why not `cloud-init`?
----------------------
+Why create this instead of just using `cloud-init`?
+---------------------------------------------------
 
-It pulls in a large pile of Python code; if one's operating system is
-sufficiently mimimal to not have Python, then you very likely have at
-least GLib.
+cloud-init is a very featureful program - it has many data providers
+and backends.  This leads to a fuzzy line between what it does and
+what other operating system management and configuration tools like
+Puppet should do.  It means cloud-init is likely to keep growing.
 
-Why not shell script?
----------------------
-
-Shell is OK for about 10 lines of code.  Beyond that, one should
-really turn to real programming languages.  C is fine for this, and
-GLib makes it pleasant enough.
+Beyond simply being a large program in itself, cloud-init is written
+Python, and `min-metadata-service` is targeted at small host operating
+systems that don't necessarily include Python by default.
 
 Contributing
 ------------
