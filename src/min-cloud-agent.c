@@ -22,6 +22,7 @@
 
 #include <gio/gio.h>
 #include <gio/gunixoutputstream.h>
+#include <gio/gfiledescriptorbased.h>
 #define LIBSOUP_USE_UNSTABLE_REQUEST_API
 #include <libsoup/soup.h>
 #include <libsoup/soup-request-http.h>
