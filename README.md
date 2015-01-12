@@ -1,3 +1,9 @@
+Currently not actively developed
+--------------------------------
+
+Note: this repository is not under active development; the author
+is working instead on https://cloudinit.readthedocs.org/en/latest/
+
 min-cloud-agent
 ===============
 
